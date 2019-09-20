@@ -1,0 +1,220 @@
+#Data Setup
+
+foo <- read.csv("Multi_Develop_Data.csv")
+names(foo)
+date.columns <- c(11, 12, 14, 15, 16, 17, 18, 25)
+
+
+for(i in date.columns){
+  which_values_are_missing <- which(as.character(foo[, i]) == "")
+  foo[which_values_are_missing, i] <- NA
+  foo[, i] <- as.Date(as.character(foo[, i]))
+}
+
+#removing NAs from the Ciculation Date column
+
+which.have.NAs <- which(is.na(foo$CirculationDate))
+new_foo <- foo[-which.have.NAs, ]
+
+#removing dates that are less than 2009-01-01
+
+cutoff.date <- which(new_foo$CirculationDate >= "2009-01-01")
+final_foo <- new_foo[cutoff.date, ]
+
+#Question1
+#a
+
+#difference between the original completion date and the approval date shows us the planned completion time
+
+final_foo <- final_foo[-which(is.na(final_foo$OriginalCompletionDate)), ]
+planned_completion <- final_foo$OriginalCompletionDate - final_foo$ApprovalDate
+
+#stats on the planned completion time
+mean(planned_completion)
+median(planned_completion)
+summary(planned_completion)
+quantile(planned_completion)
+
+#b
+
+#difference between the revised completion date and the original completion date, which shows us the delay
+
+project_delay <- na.omit(final_foo$RevisedCompletionDate - final_foo$OriginalCompletionDate)
+
+#stats on project delay
+mean(project_delay)
+median(project_delay)
+quantile(project_delay)
+
+#seeing where to split the dates into 'earlier' vs 'later' 
+#by adding the total length (days) divided by 2 to the minimum ciculation date
+
+min(na.omit(final_foo$CirculationDate)) + 3453/2
+max(na.omit(final_foo$CirculationDate))
+
+#projects that are earlier will be categroized as on orbefore October 6th, 2013
+early <- which(final_foo$CirculationDate <= "2013-10-06")
+#filtering out these dates and assigning them to the object "earlier projects"
+earlier_projects <- final_foo[early, ]
+
+#projects after October 6th 2016 will be categorized as late
+late <- which(final_foo$CirculationDate > "2013-10-06")
+later_projects <- final_foo[late, ]
+
+#calculating the earlier project delays by subtracting the revised from original dates
+earlier_project_delay <- na.omit(earlier_projects$RevisedCompletionDate - earlier_projects$OriginalCompletionDate)
+
+mean(earlier_project_delay)
+median(earlier_project_delay)
+quantile(earlier_project_delay)
+
+#calculating the later project delays by subtracting revised vs original
+later_project_delay <- na.omit(later_projects$RevisedCompletionDate - later_projects$OriginalCompletionDate)
+
+mean(later_project_delay)
+median(later_project_delay)
+quantile(later_project_delay)
+
+#c
+
+planned_completion #as assigned above (showing the difference between original completion vs approval date)
+
+#How long it actually took to complete the final project from approval to reivsed date
+actual_completion <- na.omit(final_foo$RevisedCompletionDate - final_foo$ApprovalDate)
+
+#stats on planned completion
+mean(planned_completion)
+median(planned_completion)
+quantile(planned_completion)
+
+#stats on actual completion
+mean(actual_completion)
+median(actual_completion)
+quantile(actual_completion)
+
+
+#Question 2
+
+post_2010 <- final_foo[(which(final_foo$CirculationDate >= "2010-01-01")), ]
+
+rating_zero <- post_2010$Rating == 0
+zero <- round(percent_rating_zero <- length(which(rating_zero))/length(post_2010$Rating)*100, 2)
+zero
+
+rating_one <- post_2010$Rating == 1
+one <- round(percent_rating_one <- length(which(rating_one))/length(post_2010$Rating)*100, 2)
+one
+
+rating_two <- post_2010$Rating == 2 
+two <- round(percent_rating_two <- length(which(rating_two))/length(post_2010$Rating)*100, 2)
+two
+
+rating_three <- post_2010$Rating == 3
+three <- round(percent_rating_three <- length(which(rating_three))/length(post_2010$Rating)*100, 2)
+three
+
+na.rating <- which(is.na(post_2010$Rating))
+na <- round((length(na.rating)/length(post_2010$CirculationDate))*100, 2)
+
+sum(percent_rating_one, percent_rating_two, percent_rating_zero, percent_rating_three, na)
+
+#Question 3
+
+#creating new object with only PATA type projects that are post 2010
+pata.only <- final_foo[(which(final_foo$Type == "PATA" & final_foo$CirculationDate >= "2010-01-01")), ]
+
+#finding percentages of corresponding ratings
+pata.zero <- round(length(which(pata.only$Rating == 0))/length(pata.only$Rating)*100, 2)
+pata.zero
+
+pata.one <- round(length(which(pata.only$Rating == 1))/length(pata.only$Rating)*100, 2)
+pata.one  
+
+pata.two <- round(length(which(pata.only$Rating == 2))/length(pata.only$Rating)*100, 2)
+pata.two  
+
+pata.three <- round(length(which(pata.only$Rating == 3))/length(pata.only$Rating)*100, 2)
+pata.three
+
+pata.na <- length(which(is.na(pata.only$Rating)))/length(pata.only$Rating)*100
+
+sum(pata.zero, pata.one, pata.two, pata.three, na)
+
+#Question 4
+
+#identifying the top 10% of projects in RevisedAmount
+
+revised.top10 <- final_foo[final_foo$RevisedAmount > quantile(final_foo$RevisedAmount, probs = 0.9), ]
+revised.bottom10 <- final_foo[final_foo$RevisedAmount < quantile(final_foo$RevisedAmount, probs = 0.1), ]
+
+#average rating for top 10 and bottom 10 percent of project budgets
+mean(revised.top10$Rating)
+mean(na.omit(revised.bottom10$Rating)) #omiting NA rows
+
+median(revised.top10$Rating)
+median(na.omit(revised.bottom10$Rating))
+
+#showing the frequency of dept, division, cluster, and country for top 10 percent of projects  
+
+#Department, top 10 vs bottom 10
+top10.dept <- table(revised.top10$Dept)
+top10.dept.data <- as.data.frame(top10.dept)
+top10.dept.freq <- top10.dept.data[-which(top10.dept.data$Freq == 0), ]
+top10.dept.freq
+
+bottom10.dept <- table(revised.bottom10$Dept)
+bottom10.dept.data <- as.data.frame(bottom10.dept)
+bottom10.dept.freq <- bottom10.dept.data[-which(bottom10.dept.data$Freq == 0), ]
+bottom10.dept.freq
+
+#Division, top 10 vs bottom 10
+top10.division <- table(revised.top10$Division)
+top10.division.data <- as.data.frame(top10.division)
+top10.division.freq <- top10.division.data[-which(top10.division.data$Freq == 0), ]
+top10.division.freq
+
+bottom10.division <- table(revised.bottom10$Division)
+bottom10.division.data <- as.data.frame(bottom10.division)
+bottom10.division.freq <- bottom10.division.data[-which(bottom10.division.data$Freq == 0), ]
+bottom10.division.freq
+
+#Cluster, top 10 vs bottom 10
+top10.cluster <- table(revised.top10$Cluster)
+top10.cluster.data <- as.data.frame(top10.cluster)
+top10.cluster.freq <- top10.cluster.data[-which(top10.cluster.data$Freq == 0), ]
+top10.cluster.freq
+
+bottom10.cluster <- table(revised.bottom10$Cluster)
+bottom10.cluster.data <- as.data.frame(bottom10.cluster)
+bottom10.cluster.freq <- bottom10.cluster.data[-which(bottom10.cluster.data$Freq == 0), ]
+bottom10.cluster.freq
+
+#Country, top 10 vs bottom 10
+top10.country <- table(revised.top10$Country)
+top10.country.data <- as.data.frame(top10.country)
+top10.country.data
+top10.country.freq <- top10.country.data[-which(top10.country.data$Freq == 0), ]
+top10.country.freq
+
+bottom10.country <- table(revised.bottom10$Country)
+bottom10.country.data <- as.data.frame(bottom10.country)
+bottom10.country.freq <- bottom10.country.data[-which(bottom10.country.data$Freq == 0), ]
+bottom10.country.freq
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
