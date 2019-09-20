@@ -200,21 +200,3 @@ bottom10.country <- table(revised.bottom10$Country)
 bottom10.country.data <- as.data.frame(bottom10.country)
 bottom10.country.freq <- bottom10.country.data[-which(bottom10.country.data$Freq == 0), ]
 bottom10.country.freq
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
